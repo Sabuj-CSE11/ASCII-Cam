@@ -30,21 +30,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         setupInputOutput()
         setupPreviewLayer()
         startRunningCaptureSession()
-
-//        new stuff
-        let videoOutput = AVCaptureVideoDataOutput()
-        videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as AnyHashable as! String: Int(kCVPixelFormatType_32BGRA)]
-        videoOutput.alwaysDiscardsLateVideoFrames = true
-        
-        let videoOutputQueue = DispatchQueue(label: "VideoQueue")
-        videoOutput.setSampleBufferDelegate(self, queue: videoOutputQueue)
-        if captureSession.canAddOutput(videoOutput) {
-            captureSession.addOutput(videoOutput)
-        } else {
-            print("Could not add video data as output.")
-        }
-        
-//        back to the old stuff
     }
     
     func setupCaptureSession(){
@@ -78,11 +63,26 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     }
     
     func setupPreviewLayer(){
-        cameraPreviewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-        cameraPreviewLayer?.videoGravity = AVLayerVideoGravity.resizeAspectFill
-        cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.portrait
-        cameraPreviewLayer?.frame = self.view.frame
-        self.view.layer.insertSublayer(cameraPreviewLayer!, at: 0)
+//        cameraPreviewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
+//        cameraPreviewLayer?.videoGravity = AVLayerVideoGravity.resizeAspectFill
+//        cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.portrait
+//        cameraPreviewLayer?.frame = self.view.frame
+//
+//        self.view.layer.insertSublayer(cameraPreviewLayer!, at: 0)
+        
+        //        new stuff
+        let videoOutput = AVCaptureVideoDataOutput()
+        videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as AnyHashable as! String: Int(kCVPixelFormatType_32BGRA)]
+        videoOutput.alwaysDiscardsLateVideoFrames = true
+        
+        let videoOutputQueue = DispatchQueue(label: "VideoQueue")
+        videoOutput.setSampleBufferDelegate(self, queue: videoOutputQueue)
+        if captureSession.canAddOutput(videoOutput) {
+            captureSession.addOutput(videoOutput)
+        } else {
+            print("Could not add video data as output.")
+        }
+
     }
     
     func startRunningCaptureSession(){
@@ -95,7 +95,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     }
 
     func captureOutput(_ captureOutput: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        
+        connection.videoOrientation = AVCaptureVideoOrientation.portrait
         let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)!
         
         CVPixelBufferLockBaseAddress(imageBuffer, CVPixelBufferLockFlags(rawValue: CVOptionFlags(0)))
