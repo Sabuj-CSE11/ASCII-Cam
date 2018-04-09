@@ -107,7 +107,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
 
     func captureOutput(_ captureOutput: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         var output = [String]()
-        connection.videoOrientation = AVCaptureVideoOrientation.portrait // rotate
+        connection.videoOrientation = AVCaptureVideoOrientation.portrait // rotates camera
         
         let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)!
         
@@ -116,8 +116,8 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         let width = CVPixelBufferGetWidth(imageBuffer)
         let height = CVPixelBufferGetHeight(imageBuffer)
         
-        let bitsPerComponent = 8
-        let bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer)
+//        let bitsPerComponent = 8
+//        let bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer)
         
         let baseAddress = CVPixelBufferGetBaseAddress(imageBuffer)!
         let byteBuffer = baseAddress.assumingMemoryBound(to: UInt8.self)
@@ -142,18 +142,19 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             print(values[Int(Double(grayscale(byteBuffer: byteBuffer, index: x))/25.5)])
         }
         
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let bitmapInfo = CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-        let newContext = CGContext(data: baseAddress, width: width, height: height, bitsPerComponent: bitsPerComponent, bytesPerRow: bytesPerRow, space: colorSpace, bitmapInfo: bitmapInfo)
-        if let context = newContext {
-            let cameraFrame = context.makeImage()
+//        let colorSpace = CGColorSpaceCreateDeviceRGB()
+//        let bitmapInfo = CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+//        let newContext = CGContext(data: baseAddress, width: width, height: height, bitsPerComponent: bitsPerComponent, bytesPerRow: bytesPerRow, space: colorSpace, bitmapInfo: bitmapInfo)
+//        if let context = newContext {
+//            let cameraFrame = context.makeImage()
             DispatchQueue.main.async {
                 self.asciiView.text = ""
 //                self.processedView.image = UIImage(cgImage: cameraFrame!)
                 for x in 0...(height-1) {
                     self.asciiView.text?.append((output[x] + "\n"))
+                    self.asciiView.addCharacterSpacing()
                 }
-            }
+//            }
         }
         
         CVPixelBufferUnlockBaseAddress(imageBuffer, CVPixelBufferLockFlags(rawValue: CVOptionFlags(0)))
@@ -161,3 +162,12 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
 
 }
 
+extension UILabel {
+    func addCharacterSpacing() {
+        if let labelText = text, labelText.count > 0 {
+            let attributedString = NSMutableAttributedString(string: labelText)
+            attributedString.addAttribute(NSAttributedStringKey.kern, value: 0.8, range: NSRange(location: 0, length: attributedString.length - 1))
+            attributedText = attributedString
+        }
+    }
+}
