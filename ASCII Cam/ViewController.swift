@@ -94,15 +94,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
-    
-    // converts BGR to grayscale using weighted values
-    func grayscale(byteBuffer : UnsafeMutablePointer<UInt8>, index : Int) -> UInt8 {
-        let b = UInt8(round(Double(byteBuffer[index]) * 0.11))
-        let g = UInt8(round(Double(byteBuffer[index+1]) * 0.59))
-        let r = UInt8(round(Double(byteBuffer[index+2]) * 0.3))
-        
-        return b + g + r
-    }
 
     func captureOutput(_ captureOutput: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         var output = [String]()
@@ -110,6 +101,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         
         let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)!
         
+        // locks memory address
         CVPixelBufferLockBaseAddress(imageBuffer, CVPixelBufferLockFlags(rawValue: CVOptionFlags(0)))
         
         let width = CVPixelBufferGetWidth(imageBuffer)
@@ -127,16 +119,13 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                 let gray = grayscale(byteBuffer : byteBuffer, index : index)
                 
                 output[j].append(values[Int(Double(gray)/3.643)]) // use 25.5 for 10 level colour space
-                
-                byteBuffer[index] = gray
-                byteBuffer[index+1] = gray
-                byteBuffer[index+2] = gray
             }
         }
-        print("\n\n", width, height)
         
+        // shows sample values in console
+        print("\n\nwidth", width, "\theight", height)
         for x in [0,4,8,12,16] {
-            let index = Int(Double(grayscale(byteBuffer: byteBuffer, index: x))/3.643) // shows sample values
+            let index = Int(Double(grayscale(byteBuffer: byteBuffer, index: x))/3.643)
             print(values[index])
         }
         
@@ -147,9 +136,26 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             }
             self.asciiView.addCharacterSpacing()
         }
+        
+        // frees memory address
         CVPixelBufferUnlockBaseAddress(imageBuffer, CVPixelBufferLockFlags(rawValue: CVOptionFlags(0)))
     }
 }
+
+
+
+
+// converts BGR to grayscale using weighted values
+func grayscale(byteBuffer : UnsafeMutablePointer<UInt8>, index : Int) -> UInt8 {
+    let b = UInt8(round(Double(byteBuffer[index]) * 0.11))
+    let g = UInt8(round(Double(byteBuffer[index+1]) * 0.59))
+    let r = UInt8(round(Double(byteBuffer[index+2]) * 0.3))
+    
+    return b + g + r
+}
+
+
+
 
 // allows changing spacing between characters in UILabel for viewing ASCII
 extension UILabel {
