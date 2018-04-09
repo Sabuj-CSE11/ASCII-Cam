@@ -21,17 +21,18 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     @IBOutlet weak var processedView: UIImageView!
     @IBOutlet weak var asciiView: UILabel!
     
-    //    var cameraPreviewLayer: AVCaptureVideoPreviewLayer?
+    var cameraPreviewLayer: AVCaptureVideoPreviewLayer?
     
-    var values = ["$", "@", "%", "#", "*", "+", "=", "-", ":", ",", " "]
+//    var values = ["$", "@", "%", "#", "*", "+", "=", "-", ":", ",", " "]
+    var values = ["$","@","B","%","8","&","W","M","#","*","o","a","h","k","b","d","p","q","w","m","Z","O","0","Q","L","C","J","U","Y","X","z","c","v","u","n","x","r","j","f","t","/","\\","|","(",")","1","{","}","[","]","?","-","_","+","~","<",">","i","!","l","I",";",":",",","\"","^","`","'","."," "]
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
         setupCaptureSession()
-        setupDevice()
-        setupInputOutput()
-        setupPreviewLayer()
+        setupCaptureDevice()
+        setupInput()
+        setupOutputLayer()
         startRunningCaptureSession()
     }
     
@@ -39,33 +40,30 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         captureSession.sessionPreset = AVCaptureSession.Preset.low
     }
     
-    func setupDevice(){
+    func setupCaptureDevice(){
         let deviceDiscoverySession = AVCaptureDevice.DiscoverySession(deviceTypes: [AVCaptureDevice.DeviceType.builtInWideAngleCamera], mediaType: AVMediaType.video, position: AVCaptureDevice.Position.unspecified)
         let devices = deviceDiscoverySession.devices
         
         for device in devices {
             if device.position == AVCaptureDevice.Position.back {
                 backCamera = device
-            } else if device.position == AVCaptureDevice.Position.front {
-                frontCamera = device
             }
         }
-        
         currentCamera = backCamera
     }
     
-    func setupInputOutput(){
+    func setupInput(){
         do {
             let captureDeviceInput = try AVCaptureDeviceInput(device: currentCamera!)
             captureSession.addInput(captureDeviceInput)
-//            photoOutput?.setPreparedPhotoSettingsArray([AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])], completionHandler: nil)
-            
         } catch {
             print("Could not set up input \(error)")
         }
     }
     
-    func setupPreviewLayer(){
+    func setupOutputLayer(){
+        
+        // shows camera preview
 //        cameraPreviewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
 //        cameraPreviewLayer?.videoGravity = AVLayerVideoGravity.resizeAspectFill
 //        cameraPreviewLayer?.connection?.videoOrientation = AVCaptureVideoOrientation.portrait
@@ -73,7 +71,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
 //
 //        self.view.layer.insertSublayer(cameraPreviewLayer!, at: 0)
         
-        //        new stuff
+        // delegates image processing
         let videoOutput = AVCaptureVideoDataOutput()
         videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as AnyHashable as! String: Int(kCVPixelFormatType_32BGRA)]
         videoOutput.alwaysDiscardsLateVideoFrames = true
@@ -97,6 +95,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         // Dispose of any resources that can be recreated.
     }
     
+    // converts BGR to grayscale using weighted values
     func grayscale(byteBuffer : UnsafeMutablePointer<UInt8>, index : Int) -> UInt8 {
         let b = UInt8(round(Double(byteBuffer[index]) * 0.11))
         let g = UInt8(round(Double(byteBuffer[index+1]) * 0.59))
@@ -116,20 +115,18 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         let width = CVPixelBufferGetWidth(imageBuffer)
         let height = CVPixelBufferGetHeight(imageBuffer)
         
-//        let bitsPerComponent = 8
-//        let bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer)
-        
         let baseAddress = CVPixelBufferGetBaseAddress(imageBuffer)!
         let byteBuffer = baseAddress.assumingMemoryBound(to: UInt8.self)
         
         for j in 0..<height {
-            output.append("")
+            output.append("") // adds new empty string to array
             for i in 0..<width {
+                // calcs buffer index (BGRA)
                 let index = (j * width + i) * 4
                 
                 let gray = grayscale(byteBuffer : byteBuffer, index : index)
                 
-                output[j].append(values[Int(Double(gray)/25.5)])
+                output[j].append(values[Int(Double(gray)/3.643)]) // use 25.5 for 10 level colour space
                 
                 byteBuffer[index] = gray
                 byteBuffer[index+1] = gray
@@ -138,30 +135,23 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         }
         print("\n\n", width, height)
         
-        for x in [0,3,6,9,12] {
-            print(values[Int(Double(grayscale(byteBuffer: byteBuffer, index: x))/25.5)])
+        for x in [0,4,8,12,16] {
+            let index = Int(Double(grayscale(byteBuffer: byteBuffer, index: x))/3.643) // shows sample values
+            print(values[index])
         }
         
-//        let colorSpace = CGColorSpaceCreateDeviceRGB()
-//        let bitmapInfo = CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-//        let newContext = CGContext(data: baseAddress, width: width, height: height, bitsPerComponent: bitsPerComponent, bytesPerRow: bytesPerRow, space: colorSpace, bitmapInfo: bitmapInfo)
-//        if let context = newContext {
-//            let cameraFrame = context.makeImage()
-            DispatchQueue.main.async {
-                self.asciiView.text = ""
-//                self.processedView.image = UIImage(cgImage: cameraFrame!)
-                for x in 0...(height-1) {
-                    self.asciiView.text?.append((output[x] + "\n"))
-                    self.asciiView.addCharacterSpacing()
-                }
-//            }
+        DispatchQueue.main.async {
+            self.asciiView.text = ""
+            for x in 0...(height-1) {
+                self.asciiView.text?.append((output[x] + "\n"))
+            }
+            self.asciiView.addCharacterSpacing()
         }
-        
         CVPixelBufferUnlockBaseAddress(imageBuffer, CVPixelBufferLockFlags(rawValue: CVOptionFlags(0)))
     }
-
 }
 
+// allows changing spacing between characters in UILabel for viewing ASCII
 extension UILabel {
     func addCharacterSpacing() {
         if let labelText = text, labelText.count > 0 {
